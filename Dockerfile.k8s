@@ -21,9 +21,9 @@ COPY src/ ./src/
 COPY dev/ ./dev/
 COPY aftok.com/ ./aftok.com/
 
-# Create assets symlink
-RUN mkdir -p dist
-RUN ln -sf ../aftok.com/src/assets ./dist/assets
+# Create assets symlink (dev/assets -> aftok.com/src/assets)
+# The build-parcel script will then create dist/assets -> dev/assets
+RUN ln -sf ../aftok.com/src/assets ./dev/assets
 
 # Build the application
 RUN npm run build-parcel

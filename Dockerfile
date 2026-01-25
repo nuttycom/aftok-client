@@ -1,17 +1,16 @@
-FROM       ubuntu:focal
-MAINTAINER Kris Nuttycombe <kris@aftok.com>
+FROM node:18-bookworm
 
-ENV LANG            C.UTF-8
-ENV TZ              America/Denver
+LABEL maintainer="Kris Nuttycombe <kris@aftok.com>"
+
+ENV LANG=C.UTF-8
+ENV TZ=America/Denver
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Install build tools & library dependencies
+# Install additional dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    libtinfo5 nodejs npm netbase git
-
-RUN apt-get install -y --no-install-recommends ca-certificates
-RUN update-ca-certificates
+    git ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/aftok/client
 WORKDIR /opt/aftok/client
