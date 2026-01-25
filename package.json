@@ -19,8 +19,10 @@
     "purty": "^7.0.0",
     "qrious": "^4.0.2",
     "spago": "^0.93.44",
-    "spago-legacy": "^0.21.0",
     "uuid": "^11.1.0",
     "uuid-validate": "0.0.3"
+  },
+  "overrides": {
+    "tar": "^7.5.6"
   }
 }
