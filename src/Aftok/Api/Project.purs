@@ -127,7 +127,7 @@ instance decodeJsonContributor :: DecodeJson (Contributor' String) where
     joinedOn <- x .: "joinedOn"
     loggedHours <- Hours <$> x .: "loggedHours"
     depreciatedHours <- Hours <$> x .: "depreciatedHours"
-    revShareObj <- x .: "revenureShare"
+    revShareObj <- x .: "revenueShare"
     num <- revShareObj .: "numerator"
     den <- revShareObj .: "denominator"
     let
