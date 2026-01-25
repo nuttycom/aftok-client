@@ -2,6 +2,7 @@ module Aftok.Api.Account where
 
 import Prelude
 import Data.Argonaut.Core (stringify)
+import Data.Argonaut.Decode (decodeJson, (.:))
 import Data.Argonaut.Encode (encodeJson)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
@@ -91,22 +92,32 @@ data ZAddrCheckResponse
 
 checkUsername :: String -> Aff UsernameCheckResponse
 checkUsername uname = do
-  result <- get driver RF.ignore ("/api/validate_username?username=" <> uname)
+  result <- get driver RF.json ("/api/check_username?username=" <> uname)
   pure
     $ case result of
         Left _ -> UsernameCheckTaken
         Right r
-          | r.status == StatusCode 200 -> UsernameCheckOK
+          | r.status == StatusCode 200 ->
+              case decodeJson r.body of
+                Right obj -> case obj .: "usernameAvailable" of
+                  Right true -> UsernameCheckOK
+                  _ -> UsernameCheckTaken
+                Left _ -> UsernameCheckTaken
         Right _ -> UsernameCheckTaken
 
 checkZAddr :: String -> Aff ZAddrCheckResponse
 checkZAddr zaddr = do
-  result <- get driver RF.ignore ("/api/validate_zaddr?zaddr=" <> zaddr)
+  result <- get driver RF.json ("/api/validate_zaddr?zaddr=" <> zaddr)
   pure
     $ case result of
         Left _ -> ZAddrCheckInvalid
         Right r
-          | r.status == StatusCode 200 -> ZAddrCheckValid
+          | r.status == StatusCode 200 ->
+              case decodeJson r.body of
+                Right obj -> case obj .: "zaddrValid" of
+                  Right true -> ZAddrCheckValid
+                  _ -> ZAddrCheckInvalid
+                Left _ -> ZAddrCheckInvalid
         Right _ -> ZAddrCheckInvalid
 
 signup :: SignupRequest -> Aff SignupResponse
