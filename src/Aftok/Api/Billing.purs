@@ -29,10 +29,11 @@ import Effect.Class (liftEffect)
 import Effect.Aff (Aff)
 -- import Effect.Class as EC
 import Foreign.Object (Object)
-import Affjax (post, get)
+import Affjax (get)
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
 import Affjax.Web (driver)
+import Aftok.Api.Xsrf (postWithXsrf)
 -- import Affjax.StatusCode (StatusCode(..))
 import Aftok.Types
   ( ProjectId
@@ -149,7 +150,7 @@ parseBillableJSON obj = do
 createBillable :: ProjectId -> Billable -> Aff (Either APIError BillableId)
 createBillable pid billable = do
   let body = RB.json $ billableJSON billable
-  response <- post driver RF.json ("/api/projects/" <> pidStr pid <> "/billables") (Just body)
+  response <- postWithXsrf RF.json ("/api/projects/" <> pidStr pid <> "/billables") (Just body)
   parseResponse decodeJson response
 
 listProjectBillables :: ProjectId -> Aff (Either APIError (Array (Tuple BillableId Billable)))
@@ -219,7 +220,7 @@ createPaymentRequest pid bid m = do
   let
     body = RB.json (encodeJson m)
     uri = "/api/projects/" <> pidStr pid <> "/billables/" <> billableIdStr bid <> "/paymentRequests"
-  response <- post driver RF.json uri (Just body)
+  response <- postWithXsrf RF.json uri (Just body)
   liftEffect
     <<< runExceptT
     <<< map (map toDateTime)

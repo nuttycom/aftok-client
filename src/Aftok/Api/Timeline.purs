@@ -21,10 +21,11 @@ import Foreign.Object (Object)
 -- import Text.Format as F -- (format, zeroFill, width)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Affjax (get, post)
+import Affjax (get)
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
 import Affjax.Web (driver)
+import Aftok.Api.Xsrf (postWithXsrf)
 import Data.Argonaut.Encode (encodeJson)
 import Aftok.Types (ProjectId(..), pidStr)
 import Aftok.Api.Types (APIError)
@@ -182,7 +183,7 @@ apiLogStart :: ProjectId -> Aff (Either TimelineError (KeyedEvent Instant))
 apiLogStart (ProjectId pid) = do
   let
     requestBody = Just <<< RB.Json <<< encodeJson $ { schemaVersion: "2.0" }
-  response <- post driver RF.json ("/api/user/projects/" <> UUID.toString pid <> "/logStart") requestBody
+  response <- postWithXsrf RF.json ("/api/user/projects/" <> UUID.toString pid <> "/logStart") requestBody
   liftEffect <<< runExceptT
     $ do
         kev <- withExceptT LogFailure $ parseDatedResponse decodeJson response
@@ -194,7 +195,7 @@ apiLogEnd :: ProjectId -> Aff (Either TimelineError (KeyedEvent Instant))
 apiLogEnd (ProjectId pid) = do
   let
     requestBody = Just <<< RB.Json <<< encodeJson $ { schemaVersion: "2.0" }
-  response <- post driver RF.json ("/api/user/projects/" <> UUID.toString pid <> "/logEnd") requestBody
+  response <- postWithXsrf RF.json ("/api/user/projects/" <> UUID.toString pid <> "/logEnd") requestBody
   liftEffect <<< runExceptT
     $ do
         kev <- withExceptT LogFailure $ parseDatedResponse decodeJson response

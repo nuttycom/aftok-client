@@ -8,11 +8,12 @@ import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
 import Effect.Aff (Aff)
 import Effect.Class.Console (log)
-import Affjax (post, get, printError)
+import Affjax (get, printError)
 import Affjax.StatusCode (StatusCode(..))
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
 import Affjax.Web (driver)
+import Aftok.Api.Xsrf (postWithXsrf)
 
 type LoginRequest = { username :: String, password :: String }
 
@@ -25,7 +26,7 @@ data LoginResponse
 login :: String -> String -> Aff LoginResponse
 login user pass = do
   log "Sending login request to /api/login ..."
-  result <- post driver RF.ignore "/api/login" (Just <<< RB.Json <<< encodeJson $ { username: user, password: pass })
+  result <- postWithXsrf RF.ignore "/api/login" (Just <<< RB.Json <<< encodeJson $ { username: user, password: pass })
   case result of
     Left err -> log ("Login failed: " <> printError err)
     Right r -> log ("Login status: " <> show r.status)
@@ -144,7 +145,7 @@ signup req = do
           , invitation_codes: req.invitationCodes
           }
   log ("Sending JSON request: " <> stringify signupJSON)
-  result <- post driver RF.ignore "/api/register" (Just <<< RB.Json $ signupJSON)
+  result <- postWithXsrf RF.ignore "/api/register" (Just <<< RB.Json $ signupJSON)
   case result of
     Left err -> do
       log ("Registration failed: " <> printError err)

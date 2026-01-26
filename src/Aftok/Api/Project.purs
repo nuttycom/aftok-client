@@ -23,10 +23,11 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class as EC
 import Foreign.Object (Object)
-import Affjax (get, post)
+import Affjax (get)
 import Affjax.ResponseFormat as RF
 import Affjax.RequestBody as RB
 import Affjax.Web (driver)
+import Aftok.Api.Xsrf (postWithXsrf)
 import Aftok.Types
   ( UserId
   , ProjectId
@@ -222,7 +223,7 @@ invite :: ProjectId -> Invitation -> Aff (Either APIError (Maybe Zip321Request))
 invite pid inv = do
   let inv' = inv { inviteBy = encodeInviteBy inv.inviteBy }
   let body = RB.json $ encodeInvitation inv'
-  response <- post driver RF.json ("/api/projects/" <> pidStr pid <> "/invite") (Just body)
+  response <- postWithXsrf RF.json ("/api/projects/" <> pidStr pid <> "/invite") (Just body)
   map (\r -> Zip321Request <$> r.zip321_request) <$> parseResponse decodeInvResult response
 
 type ProjectCreateRequest =
@@ -249,5 +250,5 @@ decodeProjectId json = (_ .: "projectId") =<< decodeJson json
 createProject :: ProjectCreateRequest -> Aff (Either APIError ProjectId)
 createProject pc = do
   let body = RB.json $ encodeProjectCreateRequest pc
-  response <- post driver RF.json "/api/projects/" (Just body)
+  response <- postWithXsrf RF.json "/api/projects/" (Just body)
   parseResponse decodeProjectId response
