@@ -4,6 +4,7 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Data.Foldable (oneOf)
 import Data.Maybe (Maybe(..))
+import Data.String (take, drop) as String
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Aff (launchAff_)
@@ -18,7 +19,7 @@ import Halogen.HTML.Events as E
 import Halogen.HTML.Properties as P
 import Routing (match)
 import Routing.Hash (matchesWith)
-import Routing.Match (Match, lit)
+import Routing.Match (Match, lit, str)
 import Aftok.Types (System, ProjectId, liveSystem)
 import Aftok.Login as Login
 import Aftok.Api.Account as Acc
@@ -27,6 +28,8 @@ import Aftok.Signup as Signup
 import Aftok.Timeline as Timeline
 import Aftok.Overview as Overview
 import Aftok.ProjectList as ProjectList
+import Aftok.PasswordReset as PasswordReset
+import Aftok.PasswordResetConfirm as PasswordResetConfirm
 
 main :: Effect Unit
 main =
@@ -45,7 +48,11 @@ main =
 
       billing = Billing.apiCapability
 
-      mainComponent = component liveSystem login signup timeline project overview billing
+      passwordReset = PasswordReset.apiCapability
+
+      passwordResetConfirm = PasswordResetConfirm.apiCapability
+
+      mainComponent = component liveSystem login signup timeline project overview billing passwordReset passwordResetConfirm
     halogenIO <- runUI mainComponent unit body
     void $ liftEffect
       $ matchesWith (match mainRoute) \oldMay new ->
@@ -59,6 +66,8 @@ data View
   | VOverview
   | VTimeline
   | VBilling
+  | VPasswordReset
+  | VPasswordResetConfirm String -- token
 
 mainRoute :: Match View
 mainRoute =
@@ -68,6 +77,8 @@ mainRoute =
     , VOverview <$ lit "overview"
     , VTimeline <$ lit "timeline"
     , VBilling <$ lit "billing"
+    , VPasswordReset <$ lit "password-reset"
+    , VPasswordResetConfirm <$> (lit "reset-confirm" *> str)
     ]
 
 routeHash :: View -> String
@@ -77,6 +88,8 @@ routeHash = case _ of
   VTimeline -> "timeline"
   VOverview -> "overview"
   VBilling -> "billing"
+  VPasswordReset -> "password-reset"
+  VPasswordResetConfirm token -> "reset-confirm/" <> token
   VLoading -> ""
 
 -- derive instance genericView :: Generic View _
@@ -98,6 +111,8 @@ data MainAction
   | SignupAction Signup.SignupResult
   | ProjectAction ProjectList.Output
   | LogoutAction
+  | PasswordResetAction PasswordReset.Output
+  | PasswordResetConfirmAction PasswordResetConfirm.Output
 
 type Slots =
   ( login :: Login.Slot Unit
@@ -105,6 +120,8 @@ type Slots =
   , overview :: Overview.Slot Unit
   , timeline :: Timeline.Slot Unit
   , billing :: Billing.Slot Unit
+  , passwordReset :: PasswordReset.Slot Unit
+  , passwordResetConfirm :: PasswordResetConfirm.Slot Unit
   )
 
 _login = Proxy :: Proxy "login"
@@ -117,6 +134,10 @@ _timeline = Proxy :: Proxy "timeline"
 
 _billing = Proxy :: Proxy "billing"
 
+_passwordReset = Proxy :: Proxy "passwordReset"
+
+_passwordResetConfirm = Proxy :: Proxy "passwordResetConfirm"
+
 component
   :: forall input output h m
    . Monad m
@@ -127,8 +148,10 @@ component
   -> ProjectList.Capability m
   -> Overview.Capability m
   -> Billing.Capability m
+  -> PasswordReset.Capability m
+  -> PasswordResetConfirm.Capability m
   -> H.Component MainQuery input output m
-component system loginCap signupCap tlCap pCap ovCap bcap =
+component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConfirmCap =
   H.mkComponent
     { initialState
     , render
@@ -169,24 +192,36 @@ component system loginCap signupCap tlCap pCap ovCap bcap =
       withNavBar
         $ HH.div_
             [ HH.slot _billing unit (Billing.component system bcap pCap) st.selectedProject ProjectAction ]
+    VPasswordReset ->
+      HH.div_
+        [ HH.slot _passwordReset unit (PasswordReset.component system pwResetCap) unit PasswordResetAction ]
+    VPasswordResetConfirm token ->
+      HH.div_
+        [ HH.slot _passwordResetConfirm unit (PasswordResetConfirm.component system pwResetConfirmCap) { token } PasswordResetConfirmAction ]
 
   handleAction :: MainAction -> H.HalogenM MainState MainAction Slots output m Unit
   handleAction = case _ of
     Initialize -> do
+      let
+        isResetConfirmRoute r = String.take 14 r == "reset-confirm/"
+        parseResetConfirmRoute r = VPasswordResetConfirm (String.drop 14 r)
       route <- lift system.getHash
       nextView <- case route of
         "login" -> pure VLogin
         "signup" -> pure VSignup
-        other -> do
-          result <- lift loginCap.checkLogin
-          pure
-            $ case result of
-                Acc.LoginForbidden -> VLogin
-                Acc.LoginError _ -> VLogin
-                _ -> case other of
-                  "timeline" -> VTimeline
-                  "billing" -> VBilling
-                  _ -> VOverview
+        "password-reset" -> pure VPasswordReset
+        other
+          | isResetConfirmRoute other -> pure $ parseResetConfirmRoute other
+          | otherwise -> do
+              result <- lift loginCap.checkLogin
+              pure
+                $ case result of
+                    Acc.LoginForbidden -> VLogin
+                    Acc.LoginError _ -> VLogin
+                    _ -> case other of
+                      "timeline" -> VTimeline
+                      "billing" -> VBilling
+                      _ -> VOverview
       navigate nextView
     SignupAction (Signup.SignupComplete _) -> navigate VLogin
     SignupAction (Signup.SigninNav) -> navigate VLogin
@@ -196,6 +231,10 @@ component system loginCap signupCap tlCap pCap ovCap bcap =
       navigate VLogin
     ProjectAction (ProjectList.ProjectChange p) ->
       H.modify_ (_ { selectedProject = Just p })
+    PasswordResetAction PasswordReset.BackToLogin ->
+      navigate VLogin
+    PasswordResetConfirmAction PasswordResetConfirm.ResetComplete ->
+      navigate VLogin
 
   handleQuery :: forall a. MainQuery a -> H.HalogenM MainState MainAction Slots output m (Maybe a)
   handleQuery = case _ of

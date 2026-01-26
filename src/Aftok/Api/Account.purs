@@ -165,3 +165,60 @@ signup req = do
     Right r -> do
       log ("Registration failed: " <> r.statusText)
       pure $ ServiceError (Just r.status) r.statusText
+
+-- Password Reset Types and Functions
+
+data PasswordResetRequestBody
+  = ResetByUsername String
+  | ResetByEmail String
+
+data PasswordResetRequestResponse
+  = ResetRequestSent
+  | ResetRequestError { status :: Maybe StatusCode, message :: String }
+
+data PasswordResetConfirmResponse
+  = ResetConfirmOK
+  | ResetConfirmInvalidToken
+  | ResetConfirmError { status :: Maybe StatusCode, message :: String }
+
+-- | Request a password reset link to be sent to the user's email
+requestPasswordReset :: PasswordResetRequestBody -> Aff PasswordResetRequestResponse
+requestPasswordReset req = do
+  let
+    body = encodeJson $ case req of
+      ResetByUsername uname -> { username: Just uname, email: Nothing :: Maybe String }
+      ResetByEmail email -> { username: Nothing :: Maybe String, email: Just email }
+  log "Sending password reset request..."
+  result <- postWithXsrf RF.ignore "/api/password-reset/request" (Just <<< RB.Json $ body)
+  case result of
+    Left err -> do
+      log ("Password reset request failed: " <> printError err)
+      pure $ ResetRequestError { status: Nothing, message: printError err }
+    Right r
+      | r.status == StatusCode 200 -> do
+          log "Password reset request sent successfully"
+          pure ResetRequestSent
+    Right r -> do
+      log ("Password reset request failed: " <> r.statusText)
+      pure $ ResetRequestError { status: Just r.status, message: r.statusText }
+
+-- | Confirm password reset with token and new password
+confirmPasswordReset :: String -> String -> Aff PasswordResetConfirmResponse
+confirmPasswordReset token newPassword = do
+  let body = encodeJson { token, newPassword }
+  log "Sending password reset confirmation..."
+  result <- postWithXsrf RF.ignore "/api/password-reset/reset" (Just <<< RB.Json $ body)
+  case result of
+    Left err -> do
+      log ("Password reset confirmation failed: " <> printError err)
+      pure $ ResetConfirmError { status: Nothing, message: printError err }
+    Right r
+      | r.status == StatusCode 204 -> do
+          log "Password reset successful!"
+          pure ResetConfirmOK
+      | r.status == StatusCode 400 -> do
+          log "Password reset failed: Invalid or expired token"
+          pure ResetConfirmInvalidToken
+    Right r -> do
+      log ("Password reset confirmation failed: " <> r.statusText)
+      pure $ ResetConfirmError { status: Just r.status, message: r.statusText }

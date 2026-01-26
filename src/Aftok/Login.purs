@@ -116,6 +116,14 @@ component system caps =
                               , E.onValueInput SetPassword
                               ]
                           ]
+                      , HH.div
+                          [ P.classes (ClassName <$> [ "form-group", "text-right" ]) ]
+                          [ HH.a
+                              [ P.href "#password-reset"
+                              , P.classes (ClassName <$> [ "small", "text-muted" ])
+                              ]
+                              [ HH.text "Forgot password?" ]
+                          ]
                       , case st.loginError of
                           Nothing -> HH.div_ []
                           Just err ->
