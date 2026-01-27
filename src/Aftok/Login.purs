@@ -116,14 +116,6 @@ component system caps =
                               , E.onValueInput SetPassword
                               ]
                           ]
-                      , HH.div
-                          [ P.classes (ClassName <$> [ "form-group", "text-right" ]) ]
-                          [ HH.a
-                              [ P.href "#password-reset"
-                              , P.classes (ClassName <$> [ "small", "text-muted" ])
-                              ]
-                              [ HH.text "Forgot password?" ]
-                          ]
                       , case st.loginError of
                           Nothing -> HH.div_ []
                           Just err ->
@@ -141,11 +133,17 @@ component system caps =
                       ]
                   ]
               , HH.p
-                  [ P.classes (ClassName <$> [ "mb-0", "font-size-sm", "text-center", "text-muted" ]) ]
+                  [ P.classes (ClassName <$> [ "mb-2", "font-size-sm", "text-center", "text-muted" ]) ]
                   [ HH.text "Need an account? "
                   , HH.a
                       [ P.href "#signup" ]
                       [ HH.text "Sign up" ]
+                  ]
+              , HH.p
+                  [ P.classes (ClassName <$> [ "mb-0", "font-size-sm", "text-center", "text-muted" ]) ]
+                  [ HH.a
+                      [ P.href "#password-reset" ]
+                      [ HH.text "Forgot password?" ]
                   ]
               ]
           ]

@@ -213,7 +213,8 @@ confirmPasswordReset token newPassword = do
       log ("Password reset confirmation failed: " <> printError err)
       pure $ ResetConfirmError { status: Nothing, message: printError err }
     Right r
-      | r.status == StatusCode 204 -> do
+      -- Accept both 200 and 204 as success (server may return either)
+      | r.status == StatusCode 200 || r.status == StatusCode 204 -> do
           log "Password reset successful!"
           pure ResetConfirmOK
       | r.status == StatusCode 400 -> do
