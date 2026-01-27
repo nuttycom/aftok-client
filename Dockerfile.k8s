@@ -35,6 +35,8 @@ FROM alpine:latest
 RUN apk add --no-cache ca-certificates
 
 # Create directory for app files
+# NOTE: This path (/app/dist) must match the init container in
+# helm/chart/aftok/templates/deployment-nginx.yaml
 RUN mkdir -p /app/dist
 
 # Copy built app from builder stage
