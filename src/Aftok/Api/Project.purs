@@ -23,11 +23,9 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class as EC
 import Foreign.Object (Object)
-import Affjax (get)
 import Affjax.ResponseFormat as RF
 import Affjax.RequestBody as RB
-import Affjax.Web (driver)
-import Aftok.Api.Xsrf (postWithXsrf)
+import Aftok.Api.Xsrf (getWithCredentials, postWithXsrf)
 import Aftok.Types
   ( UserId
   , ProjectId
@@ -175,7 +173,7 @@ parseProjectDetail pid json = do
 
 listProjects :: Aff (Either APIError (Array Project))
 listProjects = do
-  response <- get driver RF.json "/api/projects"
+  response <- getWithCredentials RF.json "/api/projects"
   EC.liftEffect
     <<< runExceptT
     <<< map decompose
@@ -184,7 +182,7 @@ listProjects = do
 
 getProjectDetail :: ProjectId -> Aff (Either APIError (Maybe ProjectDetail))
 getProjectDetail pid = do
-  response <- get driver RF.json ("/api/projects/" <> pidStr pid <> "/detail")
+  response <- getWithCredentials RF.json ("/api/projects/" <> pidStr pid <> "/detail")
   let
     parsed :: ExceptT APIError Effect (Maybe (ProjectDetail' Instant))
     parsed = parseDatedResponseMay (parseProjectDetail pid) response

@@ -21,11 +21,9 @@ import Foreign.Object (Object)
 -- import Text.Format as F -- (format, zeroFill, width)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Affjax (get)
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
-import Affjax.Web (driver)
-import Aftok.Api.Xsrf (postWithXsrf)
+import Aftok.Api.Xsrf (getWithCredentials, postWithXsrf)
 import Data.Argonaut.Encode (encodeJson)
 import Aftok.Types (ProjectId(..), pidStr)
 import Aftok.Api.Types (APIError)
@@ -235,7 +233,7 @@ apiListIntervals pid ts = do
       Before t -> [ "before=" <> t, "limit=100" ]
       During (Interval x) -> [ "after=" <> x.start, "before=" <> x.end, "limit=100" ]
       After t -> [ "after=" <> t, "limit=100" ]
-  response <- get driver RF.json ("/api/user/projects/" <> pidStr pid <> "/workIndex?" <> intercalate "&" queryElements)
+  response <- getWithCredentials RF.json ("/api/user/projects/" <> pidStr pid <> "/workIndex?" <> intercalate "&" queryElements)
   liftEffect
     <<< runExceptT
     <<< map (\(ListIntervalsResponse r) -> r.workIndex >>= (_.intervals))
@@ -245,7 +243,7 @@ apiListIntervals pid ts = do
 
 apiLatestEvent :: ProjectId -> Aff (Either TimelineError (Maybe (KeyedEvent Instant)))
 apiLatestEvent pid = do
-  response <- get driver RF.json ("/api/user/projects/" <> pidStr pid <> "/events")
+  response <- getWithCredentials RF.json ("/api/user/projects/" <> pidStr pid <> "/events")
   liftEffect
     <<< runExceptT
     <<< map head

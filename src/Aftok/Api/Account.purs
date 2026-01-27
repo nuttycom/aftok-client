@@ -13,7 +13,7 @@ import Affjax.StatusCode (StatusCode(..))
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
 import Affjax.Web (driver)
-import Aftok.Api.Xsrf (postWithXsrf)
+import Aftok.Api.Xsrf (getWithCredentials, postWithXsrf)
 
 type LoginRequest = { username :: String, password :: String }
 
@@ -40,7 +40,7 @@ login user pass = do
 
 checkLogin :: Aff LoginResponse
 checkLogin = do
-  result <- get driver RF.ignore "/api/login/check"
+  result <- getWithCredentials RF.ignore "/api/login/check"
   case result of
     Left err -> do
       pure $ LoginError { status: Nothing, message: printError err }
@@ -51,7 +51,7 @@ checkLogin = do
             StatusCode _ -> LoginForbidden
 
 logout :: Aff Unit
-logout = void $ get driver RF.ignore "/api/logout"
+logout = void $ getWithCredentials RF.ignore "/api/logout"
 
 data RecoverBy
   = RecoverByEmail String

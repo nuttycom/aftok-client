@@ -4,6 +4,7 @@
 -- | HTTP requests with the X-XSRF-TOKEN header attached.
 module Aftok.Api.Xsrf
   ( getXsrfToken
+  , getWithCredentials
   , postWithXsrf
   , putWithXsrf
   , deleteWithXsrf
@@ -45,6 +46,20 @@ xsrfHeader :: Maybe String -> Array RequestHeader
 xsrfHeader = case _ of
   Nothing -> []
   Just token -> [RequestHeader xsrfHeaderName token]
+
+-- | GET request with credentials (sends cookies)
+getWithCredentials
+  :: forall a
+   . ResponseFormat a
+  -> String
+  -> Aff (Either Error (Response a))
+getWithCredentials rf url = do
+  request driver $ defaultRequest
+    { method = Left GET
+    , url = url
+    , responseFormat = rf
+    , withCredentials = true
+    }
 
 -- | POST request with XSRF token header
 postWithXsrf

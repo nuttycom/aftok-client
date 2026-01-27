@@ -29,11 +29,9 @@ import Effect.Class (liftEffect)
 import Effect.Aff (Aff)
 -- import Effect.Class as EC
 import Foreign.Object (Object)
-import Affjax (get)
 import Affjax.RequestBody as RB
 import Affjax.ResponseFormat as RF
-import Affjax.Web (driver)
-import Aftok.Api.Xsrf (postWithXsrf)
+import Aftok.Api.Xsrf (getWithCredentials, postWithXsrf)
 -- import Affjax.StatusCode (StatusCode(..))
 import Aftok.Types
   ( ProjectId
@@ -155,7 +153,7 @@ createBillable pid billable = do
 
 listProjectBillables :: ProjectId -> Aff (Either APIError (Array (Tuple BillableId Billable)))
 listProjectBillables pid = do
-  response <- get driver RF.json ("/api/projects/" <> pidStr pid <> "/billables")
+  response <- getWithCredentials RF.json ("/api/projects/" <> pidStr pid <> "/billables")
   parseResponse (traverse parseBillableJSON <=< decodeJson) response
 
 newtype PaymentRequestId = PaymentRequestId UUID
