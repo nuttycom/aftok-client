@@ -82,7 +82,7 @@ component console caps =
           ]
           [ HH.text "Project" ]
       , HH.select
-          [ P.classes (ClassName <$> [ "form-control" ])
+          [ P.classes (ClassName <$> [ "form-select" ])
           , P.id "projectSelect"
           , E.onSelectedIndexChange Select
           ]
