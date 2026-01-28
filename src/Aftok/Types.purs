@@ -29,6 +29,7 @@ import Halogen as H
 import Halogen.Portal (portalAff)
 import Aftok.Modals.ModalFFI as ModalFFI
 import Aftok.HTML.QRious as QRious
+import Aftok.Api.Config as Config
 
 type System m =
   { href :: m String
@@ -55,6 +56,7 @@ type System m =
       -> H.ComponentHTML action slots m
   , toggleModal :: String -> ModalFFI.Toggle -> m Unit
   , renderQR :: QRious.QROpts -> m String
+  , fetchConfig :: m Config.ConfigResponse
   }
 
 liveSystem :: System Aff
@@ -71,6 +73,7 @@ liveSystem =
   , portal: portalAff
   , toggleModal: \i t -> liftEffect (ModalFFI.toggleModal i t)
   , renderQR: \opts -> liftEffect (QRious.renderQR opts)
+  , fetchConfig: Config.fetchConfig
   }
 
 type DateFFI m =

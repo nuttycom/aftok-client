@@ -23,6 +23,7 @@ import Routing.Match (Match, lit, str)
 import Aftok.Types (System, ProjectId, liveSystem)
 import Aftok.Login as Login
 import Aftok.Api.Account as Acc
+import Aftok.Api.Config as Config
 import Aftok.Billing as Billing
 import Aftok.Signup as Signup
 import Aftok.Timeline as Timeline
@@ -167,7 +168,8 @@ component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConf
   initialState :: input -> MainState
   initialState _ =
     { view: VLoading
-    , config: { recaptchaKey: "6LdiA78ZAAAAAGGvDId_JmDbhalduIDZSqbuikfq" }
+    -- Default to Google test key (works on localhost); will be overwritten by server config
+    , config: { recaptchaKey: "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" }
     , selectedProject: Nothing
     }
 
@@ -202,6 +204,15 @@ component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConf
   handleAction :: MainAction -> H.HalogenM MainState MainAction Slots output m Unit
   handleAction = case _ of
     Initialize -> do
+      -- Fetch client configuration from server
+      configResult <- lift system.fetchConfig
+      case configResult of
+        Config.ConfigOK cfg ->
+          H.modify_ (_ { config = { recaptchaKey: cfg.recaptchaSiteKey } })
+        Config.ConfigError _ ->
+          -- Keep the default/test key if config fetch fails
+          pure unit
+
       let
         isResetConfirmRoute r = String.take 14 r == "reset-confirm/"
         parseResetConfirmRoute r = VPasswordResetConfirm (String.drop 14 r)
