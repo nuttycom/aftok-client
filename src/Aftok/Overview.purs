@@ -30,6 +30,7 @@ import Aftok.HTML.Classes as C
 import Aftok.ProjectList as ProjectList
 import Aftok.Projects.Invite as Invite
 import Aftok.Projects.Create as Create
+import Aftok.Projects.GitHub as GitHub
 import Aftok.Types (System, ProjectId, UserId(..), dateStr)
 import Aftok.Api.Types (APIError)
 import Aftok.Api.Project
@@ -53,6 +54,7 @@ data OverviewAction
   | ProjectSelected (Maybe ProjectId)
   | OpenCreateModal
   | OpenInviteModal ProjectId
+  | OpenGitHubModal ProjectId
   | Pass
 
 type Slot id = forall query. H.Slot query ProjectList.Output id
@@ -61,16 +63,19 @@ type Slots =
   ( projectList :: ProjectList.Slot Unit
   , projectCreateModal :: Create.Slot Unit
   , invitationModal :: Invite.Slot Unit
+  , gitHubModal :: GitHub.Slot Unit
   )
 
 _projectList = Proxy :: Proxy "projectList"
 _projectCreateModal = Proxy :: Proxy "projectCreateModal"
 _invitationModal = Proxy :: Proxy "invitationModal"
+_gitHubModal = Proxy :: Proxy "gitHubModal"
 
 type Capability (m :: Type -> Type) =
   { getProjectDetail :: ProjectId -> m (Either APIError (Maybe ProjectDetail))
   , invitationCaps :: Invite.Capability m
   , createCaps :: Create.Capability m
+  , gitHubCaps :: GitHub.Capability m
   }
 
 component
@@ -200,10 +205,26 @@ component system caps pcaps =
                             ]
                             [ HH.text "Invite a collaborator" ]
                         ]
+                    , HH.div
+                        [ P.classes (ClassName <$> [ "col-md-2" ]) ]
+                        [ HH.button
+                            [ P.classes [ C.btn, C.btnSecondary ]
+                            , P.type_ ButtonButton
+                            , E.onClick (\_ -> OpenGitHubModal project.projectId)
+                            ]
+                            [ HH.text "GitHub Integration" ]
+                        ]
                     , system.portal
                         _invitationModal
                         unit
                         (Invite.component system caps.invitationCaps)
+                        unit
+                        Nothing
+                        (const Pass)
+                    , system.portal
+                        _gitHubModal
+                        unit
+                        (GitHub.component system caps.gitHubCaps)
                         unit
                         Nothing
                         (const Pass)
@@ -251,6 +272,8 @@ component system caps pcaps =
         H.tell _projectCreateModal unit (Create.OpenModal)
       OpenInviteModal pid -> do
         H.tell _invitationModal unit (Invite.OpenModal pid)
+      OpenGitHubModal pid -> do
+        H.tell _gitHubModal unit (GitHub.OpenModal pid)
       ProjectSelected pidMay -> do
         currentProject <- H.gets (_.selectedProject)
         when (currentProject /= pidMay)
@@ -274,6 +297,7 @@ apiCapability =
   { getProjectDetail: getProjectDetail
   , invitationCaps: Invite.apiCapability
   , createCaps: Create.apiCapability
+  , gitHubCaps: GitHub.apiCapability
   }
 
 mockCapability :: Capability Aff
@@ -305,4 +329,5 @@ mockCapability =
               }
   , invitationCaps: Invite.apiCapability
   , createCaps: Create.apiCapability
+  , gitHubCaps: GitHub.apiCapability
   }

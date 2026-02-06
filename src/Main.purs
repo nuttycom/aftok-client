@@ -31,6 +31,7 @@ import Aftok.Overview as Overview
 import Aftok.ProjectList as ProjectList
 import Aftok.PasswordReset as PasswordReset
 import Aftok.PasswordResetConfirm as PasswordResetConfirm
+import Aftok.Settings as Settings
 
 main :: Effect Unit
 main =
@@ -53,7 +54,9 @@ main =
 
       passwordResetConfirm = PasswordResetConfirm.apiCapability
 
-      mainComponent = component liveSystem login signup timeline project overview billing passwordReset passwordResetConfirm
+      settings = Settings.apiCapability
+
+      mainComponent = component liveSystem login signup timeline project overview billing settings passwordReset passwordResetConfirm
     halogenIO <- runUI mainComponent unit body
     void $ liftEffect
       $ matchesWith (match mainRoute) \oldMay new ->
@@ -67,6 +70,7 @@ data View
   | VOverview
   | VTimeline
   | VBilling
+  | VSettings
   | VPasswordReset
   | VPasswordResetConfirm String -- token
 
@@ -78,6 +82,7 @@ mainRoute =
     , VOverview <$ lit "overview"
     , VTimeline <$ lit "timeline"
     , VBilling <$ lit "billing"
+    , VSettings <$ lit "settings"
     , VPasswordReset <$ lit "password-reset"
     , VPasswordResetConfirm <$> (lit "reset-confirm" *> str)
     ]
@@ -89,6 +94,7 @@ routeHash = case _ of
   VTimeline -> "timeline"
   VOverview -> "overview"
   VBilling -> "billing"
+  VSettings -> "settings"
   VPasswordReset -> "password-reset"
   VPasswordResetConfirm token -> "reset-confirm/" <> token
   VLoading -> ""
@@ -112,6 +118,7 @@ data MainAction
   | SignupAction Signup.SignupResult
   | ProjectAction ProjectList.Output
   | LogoutAction
+  | SettingsNoOp
   | PasswordResetAction PasswordReset.Output
   | PasswordResetConfirmAction PasswordResetConfirm.Output
 
@@ -121,6 +128,7 @@ type Slots =
   , overview :: Overview.Slot Unit
   , timeline :: Timeline.Slot Unit
   , billing :: Billing.Slot Unit
+  , settings :: Settings.Slot Unit
   , passwordReset :: PasswordReset.Slot Unit
   , passwordResetConfirm :: PasswordResetConfirm.Slot Unit
   )
@@ -134,6 +142,8 @@ _overview = Proxy :: Proxy "overview"
 _timeline = Proxy :: Proxy "timeline"
 
 _billing = Proxy :: Proxy "billing"
+
+_settings = Proxy :: Proxy "settings"
 
 _passwordReset = Proxy :: Proxy "passwordReset"
 
@@ -149,10 +159,11 @@ component
   -> ProjectList.Capability m
   -> Overview.Capability m
   -> Billing.Capability m
+  -> Settings.Capability m
   -> PasswordReset.Capability m
   -> PasswordResetConfirm.Capability m
   -> H.Component MainQuery input output m
-component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConfirmCap =
+component system loginCap signupCap tlCap pCap ovCap bcap settingsCap pwResetCap pwResetConfirmCap =
   H.mkComponent
     { initialState
     , render
@@ -194,6 +205,10 @@ component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConf
       withNavBar
         $ HH.div_
             [ HH.slot _billing unit (Billing.component system bcap pCap) st.selectedProject ProjectAction ]
+    VSettings ->
+      withNavBar
+        $ HH.div_
+            [ HH.slot _settings unit (Settings.component system settingsCap) unit (const SettingsNoOp) ]
     VPasswordReset ->
       HH.div_
         [ HH.slot _passwordReset unit (PasswordReset.component system pwResetCap) unit PasswordResetAction ]
@@ -232,6 +247,7 @@ component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConf
                     _ -> case other of
                       "timeline" -> VTimeline
                       "billing" -> VBilling
+                      "settings" -> VSettings
                       _ -> VOverview
       navigate nextView
     SignupAction (Signup.SignupComplete _) -> navigate VLogin
@@ -242,6 +258,7 @@ component system loginCap signupCap tlCap pCap ovCap bcap pwResetCap pwResetConf
       navigate VLogin
     ProjectAction (ProjectList.ProjectChange p) ->
       H.modify_ (_ { selectedProject = Just p })
+    SettingsNoOp -> pure unit
     PasswordResetAction PasswordReset.BackToLogin ->
       navigate VLogin
     PasswordResetConfirmAction PasswordResetConfirm.ResetComplete ->
@@ -279,6 +296,7 @@ nav =
   [ { label: "Overview", path: "overview" }
   , { label: "Timeline", path: "timeline" }
   , { label: "Billing", path: "billing" }
+  , { label: "Settings", path: "settings" }
   ]
 
 brand :: forall a s m. H.ComponentHTML a s m
